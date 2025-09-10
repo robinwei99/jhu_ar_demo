@@ -1,36 +1,71 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-  <title>Babylon.js Minimal WebXR AR — Hover Model</title>
-  <!-- Babylon.js core + loaders from CDN -->
-  <script src="https://cdn.babylonjs.com/babylon.js"></script>
-  <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
-  <style>
-    html, body { height: 100%; margin: 0; overflow: hidden; background: #000; }
-    #renderCanvas { width: 100%; height: 100%; touch-action: none; display: block; }
-    </style>
-</head>
-<body>
-  <canvas id="renderCanvas"></canvas>
-  <script>
-    (async function () {
-      // 👉 Replace with your own model URL. GLB/GLTF/OBJ supported.
-      // e.g. 
-      //   const MODEL_URL = "https://models.babylonjs.com/boombox/boombox.glb";
-      //   const MODEL_URL = "/assets/myModel.glb";
-      const MODEL_URL = "./assets/Drone.glb"; // <-- change this
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 
-      const canvas = document.getElementById('renderCanvas');
+        <title>Babylon.js sample code</title>
 
-      // Transparent background is important for passthrough AR
-      const engine = new BABYLON.Engine(canvas, true, { antialias: true, alpha: true, preserveDrawingBuffer: true, stencil: true });
+        <!-- Babylon.js -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.2/dat.gui.min.js"></script>
+        <script src="https://assets.babylonjs.com/generated/Assets.js"></script>
+        <script src="https://cdn.babylonjs.com/recast.js"></script>
+        <script src="https://cdn.babylonjs.com/ammo.js"></script>
+        <script src="https://cdn.babylonjs.com/havok/HavokPhysics_umd.js"></script>
+        <script src="https://cdn.babylonjs.com/cannon.js"></script>
+        <script src="https://cdn.babylonjs.com/Oimo.js"></script>
+        <script src="https://cdn.babylonjs.com/earcut.min.js"></script>
+        <script src="https://cdn.babylonjs.com/babylon.js"></script>
+        <script src="https://cdn.babylonjs.com/materialsLibrary/babylonjs.materials.min.js"></script>
+        <script src="https://cdn.babylonjs.com/proceduralTexturesLibrary/babylonjs.proceduralTextures.min.js"></script>
+        <script src="https://cdn.babylonjs.com/postProcessesLibrary/babylonjs.postProcess.min.js"></script>
+        <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.js"></script>
+        <script src="https://cdn.babylonjs.com/serializers/babylonjs.serializers.min.js"></script>
+        <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
+        <script src="https://cdn.babylonjs.com/addons/babylonjs.addons.min.js"></script>
+        <script src="https://cdn.babylonjs.com/inspector/babylon.inspector.bundle.js"></script>
 
-      const createScene = async () => {
+        <style>
+            html,
+            body {
+                overflow: hidden;
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+
+            #renderCanvas {
+                width: 100%;
+                height: 100%;
+                touch-action: none;
+            }
+
+            #canvasZone {
+                width: 100%;
+                height: 100%;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="canvasZone"><canvas id="renderCanvas"></canvas></div>
+        <script>
+                    var canvas = document.getElementById("renderCanvas");
+
+                    var startRenderLoop = function (engine, canvas) {
+                        engine.runRenderLoop(function () {
+                            if (sceneToRender && sceneToRender.activeCamera) {
+                                sceneToRender.render();
+                            }
+                        });
+                    }
+
+                    var engine = null;
+        var scene = null;
+        var sceneToRender = null;
+        var createDefaultEngine = function() { return new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true,  disableWebGL2Support: false}); };
+        const createScene = async () => {
+        const MODEL_URL = "./assets/Drone.glb"; // <-- change this
         const scene = new BABYLON.Scene(engine);
-        scene.autoClear = false; // keep background from being cleared
-        scene.autoClearDepthAndStencil = false;
         scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
         // A simple light so PBR materials look decent
@@ -52,9 +87,9 @@
         } catch (err) {
           console.error("Failed to load model:", err);
           // Fallback: create a simple placeholder box
-          const box = BABYLON.MeshBuilder.CreateBox("box", { size: 0.25 }, scene);
+          const box = BABYLON.MeshBuilder.CreateBox("box", { size: 1 }, scene);
           box.material = new BABYLON.StandardMaterial("m", scene);
-          box.material.diffuseColor = new BABYLON.Color3(0.2, 0.7, 1);
+          box.material.diffuseColor = new BABYLON.Color3(0.94, 0.01, 0.01);
           box.parent = root;
         }
 
@@ -83,17 +118,36 @@
 
         return scene;
       };
+                window.initFunction = async function() {
+                    
+                    
+                    
+                    var asyncEngineCreation = async function() {
+                        try {
+                        return createDefaultEngine();
+                        } catch(e) {
+                        console.log("the available createEngine function failed. Creating the default engine instead");
+                        return createDefaultEngine();
+                        }
+                    }
 
-      const scene = await createScene();
+                    window.engine = await asyncEngineCreation();
+                    
+                    const engineOptions = window.engine.getCreationOptions?.();
+                    if (!engineOptions || engineOptions.audioEngine !== false) {
+                        
+                    }
+        if (!engine) throw 'engine should not be null.';
+        startRenderLoop(engine, canvas);
+        window.scene = createScene();};
+        initFunction().then(() => {scene.then(returnedScene => { sceneToRender = returnedScene; });
+        
+                    });
 
-      engine.runRenderLoop(() => {
-        if (scene && scene.activeCamera) {
-          scene.render();
-        }
-      });
-
-      window.addEventListener('resize', () => engine.resize());
-    })();
-  </script>
-</body>
+                    // Resize
+                    window.addEventListener("resize", function () {
+                        engine.resize();
+                    });
+        </script>
+    </body>
 </html>
