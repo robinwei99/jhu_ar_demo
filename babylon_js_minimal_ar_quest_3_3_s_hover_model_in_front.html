@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>Babylon.js Minimal WebXR AR — Hover Model</title>
+  <!-- Babylon.js core + loaders from CDN -->
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+  <style>
+    html, body { height: 100%; margin: 0; overflow: hidden; background: #000; }
+    #renderCanvas { width: 100%; height: 100%; touch-action: none; display: block; }
+    #ui { position: fixed; inset: auto 0 0 0; display: flex; justify-content: center; padding: 12px; pointer-events: none; }
+    #enterAR { pointer-events: auto; font: 600 16px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; padding: 12px 16px; border-radius: 14px; border: none; background: white; }
+  </style>
+</head>
+<body>
+  <canvas id="renderCanvas"></canvas>
+  <div id="ui"><button id="enterAR">Enter AR</button></div>
+
+  <script>
+    (async function () {
+      // 👉 Replace with your own model URL. GLB/GLTF/OBJ supported.
+      // e.g. 
+      //   const MODEL_URL = "https://models.babylonjs.com/boombox/boombox.glb";
+      //   const MODEL_URL = "/assets/myModel.glb";
+      const MODEL_URL = "./your_model.glb"; // <-- change this
+
+      const canvas = document.getElementById('renderCanvas');
+
+      // Transparent background is important for passthrough AR
+      const engine = new BABYLON.Engine(canvas, true, { antialias: true, alpha: true, preserveDrawingBuffer: true, stencil: true });
+
+      const createScene = async () => {
+        const scene = new BABYLON.Scene(engine);
+        scene.autoClear = false; // keep background from being cleared
+        scene.autoClearDepthAndStencil = false;
+        scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
+
+        // A simple light so PBR materials look decent
+        const light = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
+        light.intensity = 0.9;
+
+        // A dummy camera for non-XR preview (not used in AR)
+        const camera = new BABYLON.UniversalCamera("cam", new BABYLON.Vector3(0, 1.6, -2), scene);
+        camera.setTarget(BABYLON.Vector3.Zero());
+        camera.attachControl(canvas, true);
+
+        // Load your model
+        let root = new BABYLON.TransformNode("modelRoot", scene);
+        try {
+          const res = await BABYLON.SceneLoader.AppendAsync("", MODEL_URL, scene);
+          // Make the appended meshes parented under a single root for easy transforms
+          const meshes = scene.meshes.filter(m => m !== camera && m.name !== "BackgroundHelper");
+          for (const m of meshes) { if (!m.parent) m.parent = root; }
+        } catch (err) {
+          console.error("Failed to load model:", err);
+          // Fallback: create a simple placeholder box
+          const box = BABYLON.MeshBuilder.CreateBox("box", { size: 0.25 }, scene);
+          box.material = new BABYLON.StandardMaterial("m", scene);
+          box.material.diffuseColor = new BABYLON.Color3(0.2, 0.7, 1);
+          box.parent = root;
+        }
+
+        // Reasonable default scaling (Quest units are meters)
+        // Adjust to fit your asset size
+        root.scaling.scaleInPlace(1.0);
+
+        // Create the WebXR AR experience
+        const xr = await scene.createDefaultXRExperienceAsync({
+          disableDefaultUI: true,
+          uiOptions: { sessionMode: "immersive-ar", referenceSpaceType: "local-floor" },
+          optionalFeatures: true // enables hit-test/hand-tracking/dom-overlay when available
+        });
+
+        // Place the model ~1.2 meters in front of the user's view on XR start
+        xr.baseExperience.onStateChangedObservable.add((state) => {
+          if (state === BABYLON.WebXRState.IN_XR) {
+            const xrCam = xr.baseExperience.camera; // WebXRCamera
+            const forward = xrCam.getForwardRay().direction;
+            const distance = 1.2; // meters in front
+            root.position.copyFrom(xrCam.position.add(forward.scale(distance)));
+            // Make the model face the user
+            root.lookAt(xrCam.position);
+          }
+        });
+
+        // Optional: tap/click to re-center the model in front of you
+        scene.onPointerObservable.add(() => {
+          if (!xr.baseExperience || !xr.baseExperience.inXRSession) return;
+          const xrCam = xr.baseExperience.camera;
+          const forward = xrCam.getForwardRay().direction;
+          const distance = 1.2;
+          root.position.copyFrom(xrCam.position.add(forward.scale(distance)));
+          root.lookAt(xrCam.position);
+        }, BABYLON.PointerEventTypes.POINTERDOWN);
+
+        // Enter AR on button click (user gesture is required by browsers)
+        document.getElementById('enterAR').addEventListener('click', async () => {
+          try {
+            await xr.baseExperience.enterXRAsync("immersive-ar", "local-floor");
+            document.getElementById('ui').style.display = 'none';
+          } catch (e) {
+            console.error("Failed to start AR:", e);
+            alert("AR session failed to start. See console for details.");
+          }
+        });
+
+        return scene;
+      };
+
+      const scene = await createScene();
+
+      engine.runRenderLoop(() => {
+        if (scene && scene.activeCamera) {
+          scene.render();
+        }
+      });
+
+      window.addEventListener('resize', () => engine.resize());
+    })();
+  </script>
+</body>
+</html>
