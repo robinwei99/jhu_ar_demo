@@ -64,11 +64,11 @@
 
         // Reasonable default scaling (Quest units are meters)
         // Adjust to fit your asset size
-        root.scaling.scaleInPlace(0.01);
+        root.scaling.scaleInPlace(0.05);
 
         // Create the WebXR AR experience
         const xr = await scene.createDefaultXRExperienceAsync({
-          disableDefaultUI: true,
+          disableDefaultUI: false,
           uiOptions: { sessionMode: "immersive-ar", referenceSpaceType: "bounded-floor" },
           optionalFeatures: true // enables hit-test/hand-tracking/dom-overlay when available
         });
@@ -79,30 +79,9 @@
             const xrCam = xr.baseExperience.camera; // WebXRCamera
             const forward = xrCam.getForwardRay().direction;
             const distance = 1.2; // meters in front
-            root.position.copyFrom(xrCam.position.add(forward.scale(distance)).add(new BABYLON.Vector3(0, -1.5, 0)));
+            root.position.copyFrom(xrCam.position.add(forward.scale(distance)).add(new BABYLON.Vector3(0, -1.0, 0)));
             // Make the model face the user
             root.lookAt(xrCam.position);
-          }
-        });
-
-        // Optional: tap/click to re-center the model in front of you
-        scene.onPointerObservable.add(() => {
-          if (!xr.baseExperience || !xr.baseExperience.inXRSession) return;
-          const xrCam = xr.baseExperience.camera;
-          const forward = xrCam.getForwardRay().direction;
-          const distance = 1.2;
-          root.position.copyFrom(xrCam.position.add(forward.scale(distance)));
-          root.lookAt(xrCam.position);
-        }, BABYLON.PointerEventTypes.POINTERDOWN);
-
-        // Enter AR on button click (user gesture is required by browsers)
-        document.getElementById('enterAR').addEventListener('click', async () => {
-          try {
-            await xr.baseExperience.enterXRAsync("immersive-ar", "bounded-floor");
-            document.getElementById('ui').style.display = 'none';
-          } catch (e) {
-            console.error("Failed to start AR:", e);
-            alert("AR session failed to start. See console for details.");
           }
         });
 
