@@ -64,7 +64,7 @@
 
         // Reasonable default scaling (Quest units are meters)
         // Adjust to fit your asset size
-        root.scaling.scaleInPlace(1.0);
+        root.scaling.scaleInPlace(0.3);
 
         // Create the WebXR AR experience
         const xr = await scene.createDefaultXRExperienceAsync({
@@ -79,7 +79,7 @@
             const xrCam = xr.baseExperience.camera; // WebXRCamera
             const forward = xrCam.getForwardRay().direction;
             const distance = 1.2; // meters in front
-            root.position.copyFrom(xrCam.position.add(forward.scale(distance)));
+            root.position.copyFrom(xrCam.position.add(forward.scale(distance)).add(new BABYLON.Vector3(0, -1, 0)));
             // Make the model face the user
             root.lookAt(xrCam.position);
           }
