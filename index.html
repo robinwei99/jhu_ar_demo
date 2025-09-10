@@ -98,7 +98,7 @@
         // Enter AR on button click (user gesture is required by browsers)
         document.getElementById('enterAR').addEventListener('click', async () => {
           try {
-            await xr.baseExperience.enterXRAsync("immersive-ar", "local-floor");
+            await xr.baseExperience.enterXRAsync("immersive-ar", "bounded-floor");
             document.getElementById('ui').style.display = 'none';
           } catch (e) {
             console.error("Failed to start AR:", e);
