@@ -69,7 +69,7 @@
         // Create the WebXR AR experience
         const xr = await scene.createDefaultXRExperienceAsync({
           disableDefaultUI: false,
-          uiOptions: { sessionMode: "immersive-ar", referenceSpaceType: "bounded-floor" },
+          uiOptions: { sessionMode: "immersive-ar", referenceSpaceType: "local-floor" },
           optionalFeatures: true // enables hit-test/hand-tracking/dom-overlay when available
         });
 
