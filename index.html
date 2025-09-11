@@ -63,61 +63,48 @@
         var scene = null;
         var sceneToRender = null;
         var createDefaultEngine = function() { return new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true,  disableWebGL2Support: false}); };
-        const createScene = async () => {
-        const MODEL_URL = "./assets/Drone.glb"; // <-- change this
-        const scene = new BABYLON.Scene(engine);
-        scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
+        var createScene = async function () {
+    // This creates a basic Babylon Scene object (non-mesh)
+    var scene = new BABYLON.Scene(engine);
 
-        // A simple light so PBR materials look decent
-        const light = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
-        light.intensity = 0.9;
+    // This creates and positions a free camera (non-mesh)
+    var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 5, -10), scene);
 
-        // A dummy camera for non-XR preview (not used in AR)
-        const camera = new BABYLON.UniversalCamera("cam", new BABYLON.Vector3(0, 1.6, -2), scene);
-        camera.setTarget(BABYLON.Vector3.Zero());
-        camera.attachControl(canvas, true);
+    // This targets the camera to scene origin
+    camera.setTarget(BABYLON.Vector3.Zero());
 
-        // Load your model
-        let root = new BABYLON.TransformNode("modelRoot", scene);
-        try {
-          const res = await BABYLON.SceneLoader.AppendAsync("", MODEL_URL, scene);
-          // Make the appended meshes parented under a single root for easy transforms
-          const meshes = scene.meshes.filter(m => m !== camera && m.name !== "BackgroundHelper");
-          for (const m of meshes) { if (!m.parent) m.parent = root; }
-        } catch (err) {
-          console.error("Failed to load model:", err);
-          // Fallback: create a simple placeholder box
-          const box = BABYLON.MeshBuilder.CreateBox("box", { size: 1 }, scene);
-          box.material = new BABYLON.StandardMaterial("m", scene);
-          box.material.diffuseColor = new BABYLON.Color3(0.94, 0.01, 0.01);
-          box.parent = root;
-        }
+    // This attaches the camera to the canvas
+    camera.attachControl(canvas, true);
 
-        // Reasonable default scaling (Quest units are meters)
-        // Adjust to fit your asset size
-        root.scaling.scaleInPlace(0.1);
+    // This creates a light, aiming 0,1,0 - to the sky (non-mesh)
+    var light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
 
-        // Create the WebXR AR experience
-        const xr = await scene.createDefaultXRExperienceAsync({
-          disableDefaultUI: false,
-          uiOptions: { sessionMode: "immersive-ar", referenceSpaceType: "local-floor" },
-          optionalFeatures: true // enables hit-test/hand-tracking/dom-overlay when available
-        });
+    // Default intensity is 1. Let's dim the light a small amount
+    light.intensity = 0.7;
 
-        // Place the model ~1.2 meters in front of the user's view on XR start
-        xr.baseExperience.onStateChangedObservable.add((state) => {
-          if (state === BABYLON.WebXRState.IN_XR) {
-            const xrCam = xr.baseExperience.camera; // WebXRCamera
-            const forward = xrCam.getForwardRay().direction;
-            const distance = 1.2; // meters in front
-            root.position.copyFrom(xrCam.position.add(forward.scale(distance)).add(new BABYLON.Vector3(0, -1.0, 0)));
-            // Make the model face the user
-            root.lookAt(xrCam.position);
-          }
-        });
+    // Our built-in 'ground' shape.
+    var ground = BABYLON.MeshBuilder.CreateGround("ground", {width: 6, height: 6}, scene);
 
-        return scene;
-      };
+    const groundMaterial = new BABYLON.StandardMaterial("Ground Material", scene);
+    groundMaterial.diffuseColor = BABYLON.Color3.Red();
+    ground.material = groundMaterial;
+
+    let groundTexture = new BABYLON.Texture(Assets.textures.checkerboard_basecolor_png.path, scene);
+    groundMaterial.diffuseTexture = groundTexture;
+
+    BABYLON.ImportMeshAsync(Assets.meshes.Yeti.rootUrl + Assets.meshes.Yeti.filename, scene, { meshNames: "" }).then((result)=> {
+        result.meshes[0].scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
+    });
+    
+    const xr = await scene.createDefaultXRExperienceAsync({
+    // ask for an ar-session
+    uiOptions: {
+      sessionMode: "immersive-ar",
+    },
+    });
+    
+    return scene;
+};
                 window.initFunction = async function() {
                     
                     
